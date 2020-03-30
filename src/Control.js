@@ -111,6 +111,7 @@ open(name){
 if (name!=this.current_src){
   this.library[this.current_src]=JSON.stringify(this.editor.getValue());
 this.editor.setValue(this.library[name]);
+this.current_src=name;
 }
 
 }
