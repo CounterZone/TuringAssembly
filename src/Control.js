@@ -110,12 +110,11 @@ class Controller{
 open(name){
 if (name!=this.current_src){
   this.library[this.current_src]=JSON.stringify(this.editor.getValue());
-  this.load_script(name);
+this.editor.setValue(this.library[name]);
 }
+
 }
-  load_script(str){
-    this.editor.setValue(str);
-  }
+
   parse(str,main=true){
     var self=this;
     str=[""].concat(str.split("\n"));
