@@ -17,6 +17,15 @@ class Controller{
     this.sh=document.getElementById("sh");
     this.library_panel=document.getElementById("library_panel");
     this.load();
+    this.library["_main"]="";
+    var label=document.createElement("option");
+    label.textContent="_main";
+    label.setAttribute("selected",true);
+    this.library_panel.appendChild(label);
+    label.onclick=()=>{this.open("_main");}
+
+
+
 
   ace.define('test', [], function(require, exports, module) {
   var oop = require("ace/lib/oop");
@@ -67,7 +76,7 @@ class Controller{
   $("#Parse").click(()=>{
     this.clear();
     try{
-    this.parse(this.editor.getValue())}
+    this.parse();}
     catch(e){this.log("Syntax error.\n");this.log(e);return(e);}
     this.get_view("_main");
     this.open_view ("_main");
@@ -81,7 +90,7 @@ class Controller{
   });
   $("#Step").click(async ()=>{
     if (!this.paused)return;
-    try{
+    else   try{
     await this.step();
     }catch(e){
     this.log(e);
@@ -109,17 +118,18 @@ class Controller{
   }
 open(name){
 if (name!=this.current_src){
-  this.library[this.current_src]=JSON.stringify(this.editor.getValue());
+  this.library[this.current_src]=this.editor.getValue();
 this.editor.setValue(this.library[name]);
 this.current_src=name;
 }
 
 }
+save(){
 
-  parse(str,main=true){
+}
+  parse(main=this.current_src){
     var self=this;
-    str=[""].concat(str.split("\n"));
-
+    var str=[""].concat(this.editor.getValue().split("\n"));
     var index=0;
     function get_token(){
     const tokens=new Set(["","move","automaton","switch","end","call","reset","write","jump","accept","reject","init"]);
@@ -282,9 +292,17 @@ this.current_src=name;
          index+=1;
        }
      }
-    if(main)get_init();
-    get_automaton(main);
-    this.log("Parsed successfully!")
+    if(main=="_main"){
+    get_init();
+    get_automaton(true);
+this.log("Parsed successfully!")
+  }
+    else{
+    this.parse("_main");
+    get_automaton(false);
+    }
+
+
 }
 log(e){
     this.sh.textContent+=e+'\n';
