@@ -1,4 +1,5 @@
-{"binary_add":"automaton binary_add
+{"_main":"",
+  "binary_add":"automaton binary_add
     // input: ($) num1 $ num2 $
     // output [space] ($)sum $
     // () marks the position of the head

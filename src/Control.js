@@ -5,6 +5,7 @@ class Controller{
     this._main=null;
     this.views={};
     this.library={};
+    this.current_src="_main";
     this.load();
     this.init="";
     this.on_view=null;
@@ -95,11 +96,21 @@ class Controller{
 
   }
   load(){
-    this.library=$.getJSON("builtin.json");
-
+    $.getJSON("src/builtin.json",(data)=>{
+    $.each(data,(key,value)=>{
+      this.library[key]=value;
+      var label=document.createElement("option");
+      label.textContent=key;
+      this.library_panel.appendChild(label);
+      label.onclick=()=>{this.open(key);}
+    });
+  });
   }
 open(name){
-
+if (name!=this.current_src){
+  this.library[this.current_src]=this.editor.getValue();
+  this.load_script(name);
+}
 }
   load_script(str){
     this.editor.setValue(str);
