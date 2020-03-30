@@ -6,7 +6,6 @@ class Controller{
     this.views={};
     this.library={};
     this.current_src="_main";
-    this.load();
     this.init="";
     this.on_view=null;
     this.paused=false;
@@ -17,7 +16,8 @@ class Controller{
     this.state_container=document.getElementById("state_container");
     this.sh=document.getElementById("sh");
     this.library_panel=document.getElementById("library_panel");
-    this._src=null;
+    this.load();
+
   ace.define('test', [], function(require, exports, module) {
   var oop = require("ace/lib/oop");
   var TextMode = require("ace/mode/text").Mode;
@@ -80,6 +80,7 @@ class Controller{
     this.reset();
   });
   $("#Step").click(async ()=>{
+    if (!this.paused)return;
     try{
     await this.step();
     }catch(e){
@@ -96,8 +97,11 @@ class Controller{
 
   }
   load(){
-    $.getJSON("src/builtin.json",(data)=>{
+    console.log(  $.getJSON("https://counterzone.github.io/TuringAssembly/src/builtin.json"));
+    $.getJSON("https://counterzone.github.io/TuringAssembly/src/builtin.json","",(data)=>{
+      console.log(data);
     $.each(data,(key,value)=>{
+
       this.library[key]=value;
       var label=document.createElement("option");
       label.textContent=key;
