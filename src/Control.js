@@ -5,6 +5,7 @@ class Controller{
     this._main=null;
     this.views={};
     this.library={};
+    this.load();
     this.init="";
     this.on_view=null;
     this.paused=false;
@@ -14,8 +15,8 @@ class Controller{
     this.tape.link_to(document.getElementById("tape_container"));
     this.state_container=document.getElementById("state_container");
     this.sh=document.getElementById("sh");
-
-
+    this.library_panel=document.getElementById("library_panel");
+    this._src=null;
   ace.define('test', [], function(require, exports, module) {
   var oop = require("ace/lib/oop");
   var TextMode = require("ace/mode/text").Mode;
@@ -94,12 +95,16 @@ class Controller{
 
   }
   load(){
+    this.library=$.getJSON("builtin.json");
 
   }
+open(name){
+
+}
   load_script(str){
     this.editor.setValue(str);
   }
-  parse(str){
+  parse(str,main=true){
     var self=this;
     str=[""].concat(str.split("\n"));
 
@@ -198,10 +203,8 @@ class Controller{
 
              if (self._main.states[token[1]]==undefined)
               if(self.library[token[1]]==undefined)throw "line "+index +": Undefined automaton "+"'"+token[1]+"'";
-              else {
-                self._main.register(self.library[token[1]].Automaton);
-                self.register(self.library[token[1]].Automaton);
-              }
+              else self.parse(self.library[token[1]],false);
+
              A.register(self._main.states[token[1]]);
              current_state.index=index;
              if (name!=null)current_state.name=name;
@@ -267,8 +270,8 @@ class Controller{
          index+=1;
        }
      }
-     get_init();
-    get_automaton(true);
+    if(main)get_init();
+    get_automaton(main);
     this.log("Parsed successfully!")
 }
 log(e){

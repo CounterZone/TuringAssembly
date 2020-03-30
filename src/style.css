@@ -90,18 +90,19 @@ width:400px;
 #page_panel{
   display: inline-block;
   vertical-align: top;
- height:40px;
+ height:45px;
 width:400px;
 border: 1px solid black;
 padding: 0px;
 overflow: auto;
 }
-#state_info_panel{
+#library_panel{
   position: relative;
   display: inline-block;
   vertical-align: top;
   height:400px;
 width:  98px;border: 1px solid black;
+overflow: auto;
 }
 #control_panel{
   text-align: center;
