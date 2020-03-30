@@ -97,11 +97,8 @@ class Controller{
 
   }
   load(){
-    console.log(  $.getJSON("https://counterzone.github.io/TuringAssembly/src/builtin.json"));
     $.getJSON("https://counterzone.github.io/TuringAssembly/src/builtin.json","",(data)=>{
-      console.log(data);
     $.each(data,(key,value)=>{
-
       this.library[key]=value;
       var label=document.createElement("option");
       label.textContent=key;
@@ -112,7 +109,7 @@ class Controller{
   }
 open(name){
 if (name!=this.current_src){
-  this.library[this.current_src]=this.editor.getValue();
+  this.library[this.current_src]=JSON.stringify(this.editor.getValue());
   this.load_script(name);
 }
 }
