@@ -216,9 +216,11 @@ this.current_state=this.current_state.step(tape);
 if  (this.current_state==this.Accepted){this.reset();
    return super.step(tape);}
 else if (this.current_state==null) {return null;}
-else if (this.name!="_main" && this.current_state.state_type=="Automaton" )
+else if (this.name!="_main" && this.current_state.parent!=this )
 {
-  var p= this.current_state;this.reset();return p;}
+  var p= this.current_state;this.reset();return p;
+
+}
 else{return this;}
 }
 
@@ -259,16 +261,19 @@ node.x=Math.random()*200+100;
 node.y=Math.random()*200+100;
 this.state_panel.appendChild(node);
 }
+
 var self=this;
 for (var i in this.automaton.states){
   for (var l in this.automaton.states[i].links){
-    if (this.automaton.states[i].links[l]!=null){
+    if (this.automaton.states[i].links[l]!=null && this.automaton.states[this.automaton.states[i].links[l].target.name]===this.automaton.states[i].links[l].target){
     this.links.push(this.automaton.states[i].links[l].get_view(container_width,
-    this.automaton.states[i].links[l].target.targets.has(this.automaton.states[i])));}
-    this.state_panel.appendChild(this.links[this.links.length-1]);
+    this.automaton.states[i].links[l].target.targets.has(this.automaton.states[i])));
 
+    this.state_panel.appendChild(this.links[this.links.length-1]);
   }
 }
+}
+
 this.nodes["_st"].fx=25;
 this.nodes["_st"].fy=25;
 this.active_state=this.nodes["_st"];
@@ -285,7 +290,6 @@ this.fy=d3.event.y;
 );
 
 this.force_simulator.nodes(Object.values(this.nodes));
-
 this.force_simulator.force("link", d3.forceLink(this.links).id((n)=>{return n.id;}).distance(70));
 this.force_simulator.force("collition", d3.forceCollide(35));
 function draw(){

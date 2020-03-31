@@ -5,9 +5,10 @@ class Controller{
     this._main=null;
     this.views={};
     this.library={};
+    this.labels={};
     this.current_src="_main";
     this.init="";
-    this.on_view=null;
+    this.current_view=null;
     this.paused=false;
     this.step_time=100;
     document.getElementById("editor_container").appendChild(editor);
@@ -16,27 +17,20 @@ class Controller{
     this.state_container=document.getElementById("state_container");
     this.sh=document.getElementById("sh");
     this.library_panel=document.getElementById("library_panel");
-    this.load();
-    this.library["_main"]="";
-    var label=document.createElement("option");
-    label.textContent="_main";
-    label.setAttribute("selected",true);
-    this.library_panel.appendChild(label);
-    label.onclick=()=>{this.open("_main");}
-
-
-
-
+    window.addEventListener('beforeunload',(event)=>{this.save();});
   ace.define('test', [], function(require, exports, module) {
   var oop = require("ace/lib/oop");
   var TextMode = require("ace/mode/text").Mode;
   var test_rules = require("test_rules").test_rules;
+
   var Mode = function() {
       this.HighlightRules = test_rules;
   };
   oop.inherits(Mode, TextMode);
   exports.Mode = Mode;
   });
+
+
   ace.define('test_rules', [], function(require, exports, module) {
   var oop = require("ace/lib/oop");
   var TextHighlightRules = require("ace/mode/text_highlight_rules").TextHighlightRules;
@@ -72,12 +66,36 @@ class Controller{
   this.editor.resize();
   this.editor.session.setMode("test");
   this.editor.setTheme("ace/theme/chrome");
-
+this.load();
   $("#Parse").click(()=>{
     this.clear();
     try{
-    this.parse();}
-    catch(e){this.log("Syntax error.\n");this.log(e);return(e);}
+      if (this.current_src!="+")
+      {this.library[this.current_src]=this.editor.getValue();
+        var name=this.parse().name;
+
+       if (name!=this.current_src){
+         this.library[name]=this.library[this.current_src];
+         this.labels[name]=this.labels[this.current_src];
+         this.labels[name].textContent=name;
+         this.labels[name].onclick=()=>{this.open(name);}
+         delete this.library[this.current_src];
+         delete this.labels[this.current_src];
+         this.current_src=name;
+       };
+      }
+      else{
+        var name=this.parse(this.editor.getValue()).name;
+        if(this.library[name]!=undefined)throw "Automaton "+ "'" +name +"'"+" already exists.";
+        this.library[name]=this.editor.getValue();
+        var label=document.createElement("option");
+        label.textContent=name;
+        this.library_panel.insertBefore(label,this.labels["+"]);
+        label.onclick=()=>{this.open(name);}
+        this.library["+"]="automaton new_a\nend\n";
+      }
+  }
+    catch(e){this.log("Syntax error.");this.log(e);throw(e);}
     this.get_view("_main");
     this.open_view ("_main");
   });
@@ -105,31 +123,53 @@ class Controller{
 
 
   }
-  load(){
-    $.getJSON("https://counterzone.github.io/TuringAssembly/src/builtin.json","",(data)=>{
-    $.each(data,(key,value)=>{
-      this.library[key]=value;
+  async load(){
+    var self=this;
+    function add(name,src){
+      if (src!=null)self.library[name]=src;
       var label=document.createElement("option");
-      label.textContent=key;
-      this.library_panel.appendChild(label);
-      label.onclick=()=>{this.open(key);}
-    });
+      self.library_panel.appendChild(label);
+      label.onclick=()=>{self.open(name);}
+      label.textContent=name;
+      self.labels[name]=label;
+      return label;
+    }
+
+    if(typeof(Storage)!=undefined && window.localStorage.getItem("TuringAssembly.library")!=undefined){
+      this.library=$.parseJSON( window.localStorage.getItem("TuringAssembly.library"));
+      add("_main",this.library["_main"]).setAttribute("selected",true);
+      for (var i in this.library)if (i!="_main" && i!="+")add(i,null);
+      add("+",this.library["+"]);
+
+    }
+    else{
+      add("_main","").setAttribute("selected",true);
+    await $.getJSON("https://counterzone.github.io/TuringAssembly/src/builtin.json","",(data)=>{
+    $.each(data,(key,value)=>{add(key,value);});
   });
+  add("+","automaton new_a\nend\n");
+}
+this.editor.setValue(this.library["_main"],-1);
   }
 open(name){
 if (name!=this.current_src){
-  this.library[this.current_src]=this.editor.getValue();
-this.editor.setValue(this.library[name]);
+this.library[this.current_src]=this.editor.getValue();
+this.editor.setValue(this.library[name],-1);
 this.current_src=name;
 }
 
 }
 save(){
-
+  this.library[this.current_src]=this.editor.getValue();
+  if(typeof(Storage)!=undefined){
+    window.localStorage.setItem("TuringAssembly.library",JSON.stringify(this.library));
+  }
 }
-  parse(main=this.current_src){
+  parse(src=this.library[this.current_src],main=(this.current_src=="_main"),parse_main=true){
+    //parse_main: if true,parse main first
+
     var self=this;
-    var str=[""].concat(this.editor.getValue().split("\n"));
+    var str=[""].concat(src.split("\n"));
     var index=0;
     function get_token(){
     const tokens=new Set(["","move","automaton","switch","end","call","reset","write","jump","accept","reject","init"]);
@@ -202,16 +242,30 @@ save(){
         if(state.links["dflt"]==null){next_state.prev_link=state.set_link(next_state,write,move);}
         return next_state;
   }
-    function get_automaton(main=false){
+    function get_automaton(main=false,parent=self._main){
+      function find_a(A,name){
+        while(A.states!=undefined){
+          if (A.states[name]!=undefined)
+          return A.states[name];
+          A=A.parent;
+        }
+        if(self.library[token[1]]==undefined)throw "line "+index +": Undefined automaton "+"'"+token[1]+"'";
+        else{var h=self.parse(self.library[token[1]],false,false);
+          self._main.register(h);
+          return h;
+        }
+      }
       var token=get_token();
       if (!main){
+      if (token==null || token[0]!="automaton") throw "line "+index +": Not an automaton.";
       var A=new Automaton(token[1],index);
-      self._main.register(A);
-      self._main.Start.set_link(A," ","left","#"+A.index);
+      parent.register(A);
+      parent.Start.set_link(A," ","left","#"+A.index);
       index+=1;
-  }else{
+      }else{
         var A=new Automaton("_main",0);
         self._main=A;
+        parent=A;
       }
       var current_state=new State(null,null);
       A.Start.set_link(current_state,null,"main");
@@ -222,12 +276,9 @@ save(){
            if (["","move","write","reset","accept","jump","reject"].includes(token[0]))
                 current_state=get_state(current_state,A);
            else if (token[0]=="call"){
+             var call_A=find_a(A,token[1]);
 
-             if (self._main.states[token[1]]==undefined)
-              if(self.library[token[1]]==undefined)throw "line "+index +": Undefined automaton "+"'"+token[1]+"'";
-              else self.parse(self.library[token[1]],false);
-
-             A.register(self._main.states[token[1]]);
+             A.states[call_A.name]=call_A;
              current_state.index=index;
              if (name!=null)current_state.name=name;
              else current_state.name='_'+index;
@@ -238,13 +289,13 @@ save(){
              A.register(push1);
              A.register(push2);
              push1.set_link(push2,"#"+index,"right");
-             push2.set_link(self._main.states[token[1]],"#"+A.index,"right");
+             push2.set_link(call_A,"#"+A.index,"right");
 
              current_state=new State(null,null);
              A.Start.set_link(current_state," ","main","#"+index);
              index+=1;
            }
-           else if (token[0]=="automaton" && main)get_automaton();
+           else if (token[0]=="automaton")get_automaton(false,A);
            else  throw "line "+index +": Unexpected token "+"'"+token[0]+"'";
            name=null;
            token=get_token();
@@ -271,7 +322,8 @@ save(){
          for(var s in A.states){
            for (var l in A.states[s].links){
               if (A.states[s].links[l]!=null && typeof(A.states[s].links[l].target)=="string"){
-                  if (A.states[A.states[s].links[l].target]==undefined){throw "line "+A.states[s].index+": Undefined label "+"'"+A.states[s].links[l].target+"'";}
+                  if (A.states[A.states[s].links[l].target]==undefined){
+                    throw "line "+A.states[s].index+": Undefined label "+"'"+A.states[s].links[l].target+"'";}
                   A.states[s].links[l].target=A.states[A.states[s].links[l].target];
                 }
               if (A.states[s].links[l]!=null)  A.states[s].targets.add(A.states[s].links[l].target);
@@ -280,10 +332,11 @@ save(){
          if (main){
            A.set_link("Accepted",null,null);
        }else{
-         A.set_link(self._main.Start,null,"left");
+         A.set_link(parent.Start,null,"left");
          index+=1;
        }
        self.register(A);
+       return A;
      }
      function get_init(){
        var token=get_token();
@@ -292,21 +345,28 @@ save(){
          index+=1;
        }
      }
-    if(main=="_main"){
+  if(main){
     get_init();
     get_automaton(true);
-this.log("Parsed successfully!")
+    this.log("Parsed successfully!");
+    return this._main;
   }
     else{
-    this.parse("_main");
-    get_automaton(false);
+    if (parse_main){
+    this.parse(this.library["_main"],true);
+    if (this._main.states[this.current_src]==undefined)
+    return  get_automaton(false);
+    else return this._main.states[this.current_src];
+  }
+    else return get_automaton(false);
+
     }
 
 
 }
 log(e){
     this.sh.textContent+=e+'\n';
-     this.sh.scrollTop = this.sh.scrollHeight;
+    this.sh.scrollTop = this.sh.scrollHeight;
 }
 clear(){
   this.sh.textContent ="";
@@ -314,7 +374,7 @@ clear(){
   this.Automatons={};
   this.views={};
   this.close_view();
-  this.on_view=null;
+  this.current_view=null;
   this._main=null;
   this.reset();
 
@@ -324,6 +384,7 @@ init_tape(s=this.init){
   this.tape.set_tape("main",s);
 }
 register(A){
+  if (this.Automatons[A.name]==undefined){
   this.Automatons[A.name]=A;
   var label=document.createElement("label");
   var input=document.createElement("input");
@@ -334,6 +395,8 @@ register(A){
   $(label).click(()=>{this.open_view(A.name);});
   this.Automaton_panel.appendChild(label);
 }
+}
+
   get_view(name){
     this.views[name]=new Automaton_view(this.Automatons[name]);
   }
@@ -341,11 +404,11 @@ register(A){
 this.close_view();
 if (this.views[name]==undefined)this.get_view(name);
     this.views[name].link_to(this.state_container);
-    this.on_view=this.views[name];
-    this.on_view.step(0);
+    this.current_view=this.views[name];
+    this.current_view.step(0);
   }
   close_view(){
-    if (this.on_view!=null)this.on_view.remove_from(this.state_container);
+    if (this.current_view!=null)this.current_view.remove_from(this.state_container);
   }
   async run(){
     while (this.paused==false)try{
@@ -366,12 +429,13 @@ async step(){
   catch(err){
     throw err;
   }finally{
-  await this.on_view.step(this.step_time);
+  await this.current_view.step(this.step_time);
   await this.tape.move_selector(this.step_time);
 }
 
 
 }
+
 async reset(){
 this.pause();
 this.tape.reset();
@@ -383,7 +447,7 @@ for (var i in this.Automatons)
 this.tape._draw_selectors();
 await this.tape.move_selector();
 
-if (this.on_view!=null)await this.on_view.step(this.step_time);
+if (this.current_view!=null)await this.current_view.step(this.step_time);
 }
 async run_end(){
 this.pause();
@@ -404,7 +468,7 @@ this.pause();
   }
 finally{
    await this.tape.move_selector(this.step_time);
-   this.on_view.step(this.step_time);
+   this.current_view.step(this.step_time);
    this.tape._draw_selectors();
 }
 }

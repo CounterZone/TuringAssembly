@@ -134,6 +134,7 @@ switch(t){
 write(char){
   super.write(char);
 this.cells[this.current_tape][this.head[this.current_tape]].textContent=char;
+this._draw_selectors();
 }
 
 
