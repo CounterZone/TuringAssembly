@@ -5,6 +5,7 @@ class Controller{
     this._main=null;
     this.views={};
     this.library={};
+    this.max_count=10000;
     this.labels={};
     this.current_src="_main";
     this.init="";
@@ -454,12 +455,13 @@ await this.tape.move_selector();
 
 if (this.current_view!=null)await this.current_view.step(this.step_time);
 }
+
+
 async run_end(){
 this.pause();
   var count=0;
-  const max_count=10000;
   try{
-    while(count<max_count){
+    while(count<this.max_count){
     count+=1;
     if (this._main==null)throw "No automaton found.";
     var p=this._main.step(this.tape);
