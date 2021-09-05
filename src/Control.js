@@ -120,7 +120,10 @@ this.load();
   $("#End").click(()=>{
     this.run_end();
   });
-
+  $("#Delete").click(()=>{
+    delete this.library[this.current_src];
+    delete this.labels[this.current_src];
+  });
 
   }
   async load(){
@@ -193,6 +196,8 @@ save(){
     }
     else throw  "line "+index +": Unexpected token "+"'"+token[0]+"'";
   }
+
+
     function get_state(state,parent){ // modify the "state" with the token stream. return a blank "next_state"
         var token=get_token();
         if (token[0][0]=="#"){var name=token[0].slice(1,token[0].length);token=token.slice(1,token.length)}

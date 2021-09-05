@@ -1,5 +1,6 @@
 
 class Link{
+
 constructor(source,target){
   this.read={}; // [write,move]. here move=null/left/right/reset/{tape_name} write=string
   this.source=source;
@@ -96,6 +97,8 @@ l.deactivate=function(duration=100){
     return l;
 }
 }
+
+
 class State{
 constructor(name,index){
   this.targets=new Set();
